@@ -1,8 +1,8 @@
-# 🎬 XML Timeline Tagger & Organizer
+# XML Timeline Tagger & Organizer
 
 A command-line script for macOS that cross-references a Premiere Pro/FCP XML with a master footage folder. It automatically isolates unused media, mirrors the exact folder directory structure, and tags the moved assets in Red.
 
-## 🚀 One-Step Installation
+## One-Step Installation
 
 Open your Mac Terminal, copy the code block below, paste it, and hit **Enter**:
 
