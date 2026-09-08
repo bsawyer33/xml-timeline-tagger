@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import urllib.parse
 import subprocess
 import shutil
+import re
 import os
 import sys
 
@@ -9,17 +10,24 @@ print("\n=========================================")
 print("🎬  XML TAGGER - UNUSED MEDIA ORGANIZER 🎬")
 print("=========================================\n")
 
-raw_xml_input = input("👉 Drag and drop your XML file here, then press Enter: ").strip()
-xml_path = raw_xml_input[1:-1] if raw_xml_input.startswith(('"', "'")) and raw_xml_input.endswith(('"', "'")) else raw_xml_input
-xml_path = xml_path.replace("\\ ", " ")
+def clean_path(raw):
+    raw = raw.strip()
+    if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
+        return raw[1:-1]
+    # Terminal escapes every special character (spaces, parens, quotes, &, etc.)
+    # with a backslash when you drag a file/folder into an unquoted prompt.
+    # Undo that generically instead of only handling escaped spaces.
+    return re.sub(r'\\(.)', r'\1', raw)
+
+raw_xml_input = input("👉 Drag and drop your XML file here, then press Enter: ")
+xml_path = clean_path(raw_xml_input)
 
 if not os.path.exists(xml_path):
     print(f"\n❌ Error: XML file not found at '{xml_path}'.")
     sys.exit(1)
 
-raw_media_input = input("📁 Drag and drop the master folder (e.g., 01_FOOTAGE), then press Enter: ").strip()
-root_media_dir = raw_media_input[1:-1] if raw_media_input.startswith(('"', "'")) and raw_media_input.endswith(('"', "'")) else raw_media_input
-root_media_dir = root_media_dir.replace("\\ ", " ")
+raw_media_input = input("📁 Drag and drop the master folder (e.g., 01_FOOTAGE), then press Enter: ")
+root_media_dir = clean_path(raw_media_input)
 
 if not os.path.exists(root_media_dir) or not os.path.isdir(root_media_dir):
     print(f"\n❌ Error: Target folder directory not found at '{root_media_dir}'.")
