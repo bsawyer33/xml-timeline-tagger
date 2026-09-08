@@ -95,5 +95,5 @@ for path in moved_paths:
         subprocess.run(["xattr", "-wx", "com.apple.FinderInfo", finder_info_hex, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["xattr", "-w", "com.apple.metadata:_kMDItemUserTags", "Red\n6", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-print("\n✅ Congratulations, you’ve been programmed. Timeline clips labeled in Finder.")
+print("\n✅ Congratulations, you’ve been programmed. Timeline clips moved and labeled in Finder.")
 print("=========================================\n")
