@@ -5,6 +5,7 @@ import shutil
 import re
 import os
 import sys
+import unicodedata
 
 print("\n=========================================")
 print("🎬  XML TAGGER - UNUSED MEDIA ORGANIZER 🎬")
@@ -40,6 +41,13 @@ except Exception as e:
     print(f"\n❌ Error reading XML file: {e}")
     sys.exit(1)
 
+def normalize_key(path):
+    # macOS stores filenames with accented/special characters in decomposed
+    # (NFD) Unicode form on disk, but XML exports typically write the composed
+    # (NFC) form. Same file, different raw bytes -- normalize before comparing
+    # so accented filenames aren't wrongly flagged as unused.
+    return unicodedata.normalize('NFC', path)
+
 used_paths = set()
 for sequence in root.iter('sequence'):
     for pathurl in sequence.iter('pathurl'):
@@ -47,7 +55,7 @@ for sequence in root.iter('sequence'):
         if url and url.startswith('file://'):
             clean_url = url.replace("file://localhost", "").replace("file://", "")
             decoded_path = os.path.abspath(urllib.parse.unquote(clean_url))
-            used_paths.add(decoded_path)
+            used_paths.add(normalize_key(decoded_path))
 
 print("\n🔍 Scanning master media tree for asset files...")
 all_files = []
@@ -56,7 +64,7 @@ for dirpath, _, filenames in os.walk(root_media_dir):
         if not filename.startswith('.'):
             all_files.append(os.path.abspath(os.path.join(dirpath, filename)))
 
-unused_files = [f for f in all_files if f not in used_paths]
+unused_files = [f for f in all_files if normalize_key(f) not in used_paths]
 
 print(f"   • Total assets found inside folder: {len(all_files)}")
 print(f"   • Assets actively used on timeline: {len(all_files) - len(unused_files)}")
