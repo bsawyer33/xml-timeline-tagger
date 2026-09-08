@@ -2,26 +2,35 @@ import xml.etree.ElementTree as ET
 import urllib.parse
 import subprocess
 import shutil
+import re
 import os
 import sys
+import unicodedata
 
 print("\n=========================================")
 print("🎬  XML TAGGER - UNUSED MEDIA ORGANIZER 🎬")
 print("=========================================\n")
 
+def clean_path(raw):
+    raw = raw.strip()
+    if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
+        return raw[1:-1]
+    # Terminal escapes every special character (spaces, parens, quotes, &, etc.)
+    # with a backslash when you drag a file/folder into an unquoted prompt.
+    # Undo that generically instead of only handling escaped spaces.
+    return re.sub(r'\\(.)', r'\1', raw)
+
 # 1. Get XML Path
-raw_xml_input = input("👉 Drag and drop your XML file here, then press Enter: ").strip()
-xml_path = raw_xml_input[1:-1] if raw_xml_input.startswith(('"', "'")) and raw_xml_input.endswith(('"', "'")) else raw_xml_input
-xml_path = xml_path.replace("\\ ", " ")
+raw_xml_input = input("👉 Drag and drop your XML file here, then press Enter: ")
+xml_path = clean_path(raw_xml_input)
 
 if not os.path.exists(xml_path):
     print(f"\n❌ Error: XML file not found at '{xml_path}'.")
     sys.exit(1)
 
 # 2. Get Root Media Folder Path
-raw_media_input = input("📁 Drag and drop the master folder (e.g., 01_FOOTAGE), then press Enter: ").strip()
-root_media_dir = raw_media_input[1:-1] if raw_media_input.startswith(('"', "'")) and raw_media_input.endswith(('"', "'")) else raw_media_input
-root_media_dir = root_media_dir.replace("\\ ", " ")
+raw_media_input = input("📁 Drag and drop the master folder (e.g., 01_FOOTAGE), then press Enter: ")
+root_media_dir = clean_path(raw_media_input)
 
 if not os.path.exists(root_media_dir) or not os.path.isdir(root_media_dir):
     print(f"\n❌ Error: Target folder directory not found at '{root_media_dir}'.")
@@ -42,8 +51,13 @@ for sequence in root.iter('sequence'):
         if url and url.startswith('file://'):
             clean_url = url.replace("file://localhost", "").replace("file://", "")
             decoded_path = os.path.abspath(urllib.parse.unquote(clean_url))
-            # Grab just the filename and force lowercase to ensure a flawless match
-            used_filenames.add(os.path.basename(decoded_path).lower())
+            # Grab just the filename and force lowercase to ensure a flawless match.
+            # Also normalize to NFC: macOS stores accented/special-character filenames
+            # in decomposed (NFD) form on disk, but XML exports typically write the
+            # composed (NFC) form. Same file, different raw bytes -- normalize both
+            # sides so accented filenames aren't wrongly flagged as unused.
+            filename = unicodedata.normalize('NFC', os.path.basename(decoded_path).lower())
+            used_filenames.add(filename)
 
 # Scan Root Directory and all subfolders
 print("\n🔍 Scanning master media tree for asset files...")
@@ -56,7 +70,8 @@ for dirpath, _, filenames in os.walk(root_media_dir):
 # Cross-reference by FILENAME to isolate unused assets
 unused_files = []
 for f in all_files:
-    if os.path.basename(f).lower() not in used_filenames:
+    filename = unicodedata.normalize('NFC', os.path.basename(f).lower())
+    if filename not in used_filenames:
         unused_files.append(f)
 
 print(f"   • Total assets found inside folder: {len(all_files)}")
